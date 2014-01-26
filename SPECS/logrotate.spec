@@ -1,7 +1,7 @@
 Summary: Rotates, compresses, removes and mails system log files
 Name: logrotate
 Version: 3.8.6
-Release: 2%{?dist}
+Release: 4%{?dist}
 License: GPL+
 Group: System Environment/Base
 Url: https://fedorahosted.org/logrotate/
@@ -60,6 +60,12 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0644, root, root) %verify(not size md5 mtime) %config(noreplace) %{_localstatedir}/lib/logrotate.status
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 3.8.6-4
+- Mass rebuild 2014-01-24
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 3.8.6-3
+- Mass rebuild 2013-12-27
+
 * Mon Oct 07 2013 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-2
 - fix -f/--force option (#1015017)
 - use mode 0700 for crontab script (#1012764)
