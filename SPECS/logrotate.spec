@@ -1,12 +1,16 @@
 Summary: Rotates, compresses, removes and mails system log files
 Name: logrotate
 Version: 3.8.6
-Release: 4%{?dist}
+Release: 6%{?dist}
 License: GPL+
 Group: System Environment/Base
 Url: https://fedorahosted.org/logrotate/
 Source: https://fedorahosted.org/releases/l/o/logrotate/logrotate-%{version}.tar.gz
 Patch0: logrotate-3.8.6-force.patch
+Patch1: logrotate-3.8.6-r465.patch
+Patch2: logrotate-3.8.6-sortglob.patch
+Patch3: logrotate-3.8.6-r460.patch
+Patch4: logrotate-3.8.6-compress-subject.patch
 
 Requires: coreutils >= 5.92 popt
 BuildRequires: libselinux-devel popt-devel libacl-devel acl
@@ -27,6 +31,10 @@ log files on your system.
 %setup -q
 
 %patch0 -p1 -b .force
+%patch1 -p1 -b .r465
+%patch2 -p1 -b .sortglob
+%patch3 -p1 -b .r460
+%patch4 -p1 -b .compressmail
 
 %build
 make %{?_smp_mflags} RPM_OPT_FLAGS="$RPM_OPT_FLAGS" WITH_SELINUX=yes WITH_ACL=yes
@@ -54,12 +62,21 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755, root, root) %{_sbindir}/logrotate
 %attr(0644, root, root) %{_mandir}/man8/logrotate.8*
 %attr(0644, root, root) %{_mandir}/man5/logrotate.conf.5*
-%attr(0700, root, root) %{_sysconfdir}/cron.daily/logrotate
+%attr(0700, root, root) %config(noreplace) %{_sysconfdir}/cron.daily/logrotate
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/logrotate.conf
 %attr(0755, root, root) %dir %{_sysconfdir}/logrotate.d
 %attr(0644, root, root) %verify(not size md5 mtime) %config(noreplace) %{_localstatedir}/lib/logrotate.status
 
 %changelog
+* Tue Oct 06 2015 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-6
+- fix #1244156 - make filename in subject consistent when used with compress
+
+* Thu Apr 23 2015 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-5
+- mention copy/copytruncate/renamecopy influence to olddir option (#1175292)
+- delete last log when dateformat cannot be sorted alphabetically (#1174208)
+- mark cron.daily/logrotate as config file (#1174207)
+- create olddir diectory if it does not exist (#1187161)
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 3.8.6-4
 - Mass rebuild 2014-01-24
 
