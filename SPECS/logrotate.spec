@@ -1,7 +1,7 @@
 Summary: Rotates, compresses, removes and mails system log files
 Name: logrotate
 Version: 3.8.6
-Release: 6%{?dist}
+Release: 7%{?dist}
 License: GPL+
 Group: System Environment/Base
 Url: https://fedorahosted.org/logrotate/
@@ -11,6 +11,7 @@ Patch1: logrotate-3.8.6-r465.patch
 Patch2: logrotate-3.8.6-sortglob.patch
 Patch3: logrotate-3.8.6-r460.patch
 Patch4: logrotate-3.8.6-compress-subject.patch
+Patch5: logrotate-3.8.6-olddircopy.patch
 
 Requires: coreutils >= 5.92 popt
 BuildRequires: libselinux-devel popt-devel libacl-devel acl
@@ -35,6 +36,7 @@ log files on your system.
 %patch2 -p1 -b .sortglob
 %patch3 -p1 -b .r460
 %patch4 -p1 -b .compressmail
+%patch5 -p1 -b .olddircopy
 
 %build
 make %{?_smp_mflags} RPM_OPT_FLAGS="$RPM_OPT_FLAGS" WITH_SELINUX=yes WITH_ACL=yes
@@ -68,6 +70,9 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0644, root, root) %verify(not size md5 mtime) %config(noreplace) %{_localstatedir}/lib/logrotate.status
 
 %changelog
+* Mon Nov 09 2015 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-7
+- fix #1163437 - support olddir on different device with copy or copytruncate
+
 * Tue Oct 06 2015 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-6
 - fix #1244156 - make filename in subject consistent when used with compress
 
