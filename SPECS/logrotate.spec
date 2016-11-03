@@ -1,17 +1,23 @@
 Summary: Rotates, compresses, removes and mails system log files
 Name: logrotate
 Version: 3.8.6
-Release: 7%{?dist}
+Release: 12%{?dist}
 License: GPL+
 Group: System Environment/Base
 Url: https://fedorahosted.org/logrotate/
 Source: https://fedorahosted.org/releases/l/o/logrotate/logrotate-%{version}.tar.gz
+Source1: rwtab
 Patch0: logrotate-3.8.6-force.patch
 Patch1: logrotate-3.8.6-r465.patch
 Patch2: logrotate-3.8.6-sortglob.patch
 Patch3: logrotate-3.8.6-r460.patch
 Patch4: logrotate-3.8.6-compress-subject.patch
 Patch5: logrotate-3.8.6-olddircopy.patch
+Patch6: logrotate-3.8.6-state-clean.patch
+Patch7: logrotate-3.8.6-statusfile.patch
+
+# fix #1192936 - provide diagnostic in case log does not need rotating
+Patch9: logrotate-3.8.6-diagnostic.patch
 
 Requires: coreutils >= 5.92 popt
 BuildRequires: libselinux-devel popt-devel libacl-devel acl
@@ -37,6 +43,9 @@ log files on your system.
 %patch3 -p1 -b .r460
 %patch4 -p1 -b .compressmail
 %patch5 -p1 -b .olddircopy
+%patch6 -p1 -b .stateclean
+%patch7 -p1 -b .statusfile
+%patch9 -p1
 
 %build
 make %{?_smp_mflags} RPM_OPT_FLAGS="$RPM_OPT_FLAGS" WITH_SELINUX=yes WITH_ACL=yes
@@ -49,11 +58,25 @@ rm -rf $RPM_BUILD_ROOT
 make PREFIX=$RPM_BUILD_ROOT MANDIR=%{_mandir} install
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/logrotate.d
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/cron.daily
-mkdir -p $RPM_BUILD_ROOT/%{_localstatedir}/lib
+mkdir -p $RPM_BUILD_ROOT/%{_localstatedir}/lib/logrotate
 
 install -p -m 644 examples/logrotate-default $RPM_BUILD_ROOT/%{_sysconfdir}/logrotate.conf
 install -p -m 755 examples/logrotate.cron $RPM_BUILD_ROOT/%{_sysconfdir}/cron.daily/logrotate
-touch $RPM_BUILD_ROOT/%{_localstatedir}/lib/logrotate.status
+touch $RPM_BUILD_ROOT/%{_localstatedir}/lib/logrotate/logrotate.status
+
+# Make sure logrotate is able to run on read-only root
+mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/rwtab.d
+install -m644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/rwtab.d/logrotate
+
+%pre
+# If /var/lib/logrotate/logrotate.status does not exist, create it and copy
+# the /var/lib/logrotate.status in it (if it exists). We have to do that in pre
+# script, otherwise the /var/lib/logrotate/logrotate.status would not be there,
+# because during the update, it is removed/renamed.
+if [ ! -d %{_localstatedir}/lib/logrotate/ -a -f %{_localstatedir}/lib/logrotate.status ]; then
+  mkdir -p %{_localstatedir}/lib/logrotate
+  cp -a %{_localstatedir}/lib/logrotate.status %{_localstatedir}/lib/logrotate
+fi
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -67,9 +90,29 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0700, root, root) %config(noreplace) %{_sysconfdir}/cron.daily/logrotate
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/logrotate.conf
 %attr(0755, root, root) %dir %{_sysconfdir}/logrotate.d
-%attr(0644, root, root) %verify(not size md5 mtime) %config(noreplace) %{_localstatedir}/lib/logrotate.status
+%attr(0755, root, root) %dir %{_localstatedir}/lib/logrotate
+%attr(0644, root, root) %verify(not size md5 mtime) %config(noreplace) %{_localstatedir}/lib/logrotate/logrotate.status
+%config(noreplace) %{_sysconfdir}/rwtab.d/logrotate
 
 %changelog
+* Thu Jul 14 2016 Kamil Dudka <kdudka@redhat.com> - 3.8.6-12
+- make the /var/lib/logrotate directory owned by logrotate (#1272236)
+
+* Mon Jul 11 2016 Kamil Dudka <kdudka@redhat.com> - 3.8.6-11
+- fix #1354203 - remove the fix for bug #1321980
+
+* Fri Jul 01 2016 Kamil Dudka <kdudka@redhat.com> - 3.8.6-10
+- fix #1192936 - provide diagnostic in case log does not need rotating
+- fix #1321980 - do not exit if status file is corrupted
+
+* Fri Jul 01 2016 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-9
+- fix #1272236 - add missing rwtab file
+
+* Fri Mar 11 2016 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-8
+- fix #1201252 - delete unused entries in state file, fix bad performance
+  with big state file
+- fix #1272236 - move logrotate.status to /var/lib/logrotate and add it to rwtab.d
+
 * Mon Nov 09 2015 Jan Kaluza <jkaluza@redhat.com> - 3.8.6-7
 - fix #1163437 - support olddir on different device with copy or copytruncate
 
