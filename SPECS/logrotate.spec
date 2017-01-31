@@ -1,7 +1,7 @@
 Summary: Rotates, compresses, removes and mails system log files
 Name: logrotate
 Version: 3.8.6
-Release: 12%{?dist}
+Release: 12%{?dist}.1
 License: GPL+
 Group: System Environment/Base
 Url: https://fedorahosted.org/logrotate/
@@ -18,6 +18,7 @@ Patch7: logrotate-3.8.6-statusfile.patch
 
 # fix #1192936 - provide diagnostic in case log does not need rotating
 Patch9: logrotate-3.8.6-diagnostic.patch
+Patch100: logrotate-3.8.6-weekly.patch
 
 Requires: coreutils >= 5.92 popt
 BuildRequires: libselinux-devel popt-devel libacl-devel acl
@@ -46,6 +47,7 @@ log files on your system.
 %patch6 -p1 -b .stateclean
 %patch7 -p1 -b .statusfile
 %patch9 -p1
+%patch100 -p1 -b .weekly
 
 %build
 make %{?_smp_mflags} RPM_OPT_FLAGS="$RPM_OPT_FLAGS" WITH_SELINUX=yes WITH_ACL=yes
@@ -95,6 +97,9 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/rwtab.d/logrotate
 
 %changelog
+* Tue Jan 31 2017 ClearFoundation <developer@clearfoundation.com> - 3.8.6-12.clear.1
+- added weekly fix [#11331]
+
 * Thu Jul 14 2016 Kamil Dudka <kdudka@redhat.com> - 3.8.6-12
 - make the /var/lib/logrotate directory owned by logrotate (#1272236)
 

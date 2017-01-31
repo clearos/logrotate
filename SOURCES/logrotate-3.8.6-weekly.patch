@@ -1,0 +1,58 @@
+From 1cad50b128ebfc2a9b0490f735a7f6773303e654 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Wed, 7 Dec 2016 16:34:13 +0100
+Subject: [PATCH] weekly: trigger the rotation more predictably
+
+... by ignoring the exact time.  If the (absolute) day counter
+advances by 7+ days since the last rotation, a new rotation is
+triggered.
+---
+ logrotate.c | 28 ++++++++++++++++++----------
+ 1 file changed, 18 insertions(+), 10 deletions(-)
+
+diff --git a/logrotate.c b/logrotate.c
+index 0523ab2..022f6f0 100644
+--- a/logrotate.c
++++ b/logrotate.c
+@@ -1069,6 +1069,20 @@ static int copyTruncate(char *currLog, char *saveLog, struct stat *sb,
+     return 0;
+ }
+ 
++/* return value similar to mktime() but the exact time is ignored */
++static time_t mktimeFromDateOnly(const struct tm *src)
++{
++    /* explicit struct copy to retain C89 compatibility */
++    struct tm tmp;
++    memcpy(&tmp, src, sizeof tmp);
++
++    /* abstract out (nullify) fields expressing the exact time */
++    tmp.tm_hour = 0;
++    tmp.tm_min  = 0;
++    tmp.tm_sec  = 0;
++    return mktime(&tmp);
++}
++
+ int findNeedRotating(struct logInfo *log, int logNum, int force)
+ {
+     struct stat sb;
+@@ -1162,16 +1176,10 @@ int findNeedRotating(struct logInfo *log, int logNum, int force)
+ 	       state->lastRotated.tm_hour != now.tm_hour) {
+ 	switch (log->criterium) {
+ 	case ROT_WEEKLY:
+-	    /* rotate if:
+-	       1) the current weekday is before the weekday of the
+-	       last rotation
+-	       2) more then a week has passed since the last
+-	       rotation */
+-	    state->doRotate = ((now.tm_wday < state->lastRotated.tm_wday)
+-			       ||
+-			       ((mktime(&now) -
+-				 mktime(&state->lastRotated)) >
+-				(7 * 24 * 3600)));
++	    /* rotate if date is advanced by 7+ days (exact time is ignored) */
++	    state->doRotate =
++		((mktimeFromDateOnly(&now) -
++		  mktimeFromDateOnly(&state->lastRotated)) >= (7 * 24 * 3600));
+ 	    if (!state->doRotate) {
+ 	    message(MESS_DEBUG, "  log does not need rotating "
+ 		    "(log has been rotated at %d-%d-%d %d:%d, "
